@@ -17,9 +17,24 @@ public abstract class Model {
 			LabelAlphabet topicAlphabet);
 
 	public  int numTopics;
-	public int numSamples = 0;
+	//public int numSamples = 0;
 	public Random r = new Random();
 	public Randoms random;
+	
+	//Model Parameters
+	public double[] alpha;	//Prior distribution of doc_topic
+	public double alphaSum;
+	public double beta;		//Prior distribution of topic_citation
+	public double betaSum;
+	
+	public double gamma;	//Prior distribution of doc_part-weight
+	public double gammaSum;
+	
+	//Model Results
+	public double[][] theta_train;	//M*K
+	public double[][] phi_train;	//Vocabulary*K
+	public double[][] psi_train;	//M*2
+	
 	// for dirichlet estimation
 	public int[] docLengthCounts; // histogram of document sizes
 	public int[][] topicDocCounts;
@@ -49,113 +64,11 @@ public abstract class Model {
 			}
 			//System.out.println();
 		}
-		corpus.alphaSum = Dirichlet.learnParameters(corpus.alpha, topicDocCounts, docLengthCounts);
+		alphaSum = Dirichlet.learnParameters(alpha, topicDocCounts, docLengthCounts);
 	}
 
-	public void estimateParameters(Corpus corpus) {
-		// estimate parameters after every k iterations after burn-in
-		numSamples++;
-		// int[][] typeTopicCounts = new
-		// int[corpus.vocabulary.size()][numTopics];
-		// int[][] docTopicCounts = new int[corpus.docs.size()][numTopics];
-		// int[][] citationTopicCounts = new int[corpus.docs.size()][numTopics];
-
-		for (int doc = 0; doc < corpus.docs.size(); doc++) {
-			for (int i = 0; i < numTopics; i++) {
-				if (numSamples > 1)
-					corpus.theta_train[doc][i] *= (numSamples - 1);
-				corpus.theta_train[doc][i] += (corpus.alpha[i] / (corpus.docs
-						.get(doc).docLength + corpus.alphaSum));
-			}
-			int[] topics = corpus.docs.get(doc).topicAssignments.getFeatures();
-			// System.out.println("=========");
-			// System.out.println(topics.length);
-			// System.out.println(corpus.docs.get(doc).topicAssignments.getLength());
-			for (int i = 0; i < topics.length; i++) {
-				corpus.theta_train[doc][topics[i]] += (1.0 / (corpus.docs
-						.get(doc).docLength + corpus.alphaSum));
-			}
-			if (numSamples > 1) {
-				for (int i = 0; i < numTopics; i++) {
-					corpus.theta_train[doc][i] /= numSamples;
-				}
-			}
-		}
-		for (int k = 0; k < corpus.vocabulary.size(); k++) {
-			for (int i = 0; i < numTopics; i++) {
-				if (numSamples > 1)
-					corpus.phi_train[k][i] *= (numSamples - 1);
-				corpus.phi_train[k][i] += ((corpus.typeTopicCounts[k].get(i) + corpus.beta) / (corpus.tokensPerTopic[i] + corpus.betaSum));
-				if (numSamples > 1)
-					corpus.phi_train[k][i] /= numSamples;
-			}
-		}
-		for (int k = 0; k < corpus.citationAlphabet.size(); k++) {
-			for (int i = 0; i < numTopics; i++) {
-				if (numSamples > 1)
-					corpus.psi_train[k][i] *= (numSamples - 1);
-				corpus.psi_train[k][i] += ((corpus.citationTopicCounts[k]
-						.get(i) + corpus.gamma) / (corpus.citationsPerTopic[i] + corpus.gammaSum));
-				if (numSamples > 1)
-					corpus.psi_train[k][i] /= (numSamples);
-			}
-		}
-
-	}
-
-	public void estimateParameters_single(Corpus corpus) {
-		// estimate parameters after every k iterations after burn-in
-		numSamples++;
-		// int[][] typeTopicCounts = new
-		// int[corpus.vocabulary.size()][numTopics];
-		// int[][] docTopicCounts = new int[corpus.docs.size()][numTopics];
-		// int[][] citationTopicCounts = new int[corpus.docs.size()][numTopics];
-
-		/*for (int doc = 0; doc < corpus.docs.size(); doc++) {
-			for (int i = 0; i < numTopics; i++) {
-				corpus.theta_train[doc][i] = (corpus.alpha[i] / (corpus.docs
-						.get(doc).docLength + corpus.alphaSum));
-			}
-			int[] topics = corpus.docs.get(doc).wordTopicAssignment;
-			for (int i = 0; i < topics.length; i++) {
-				corpus.theta_train[doc][topics[i]] += (1.0 / (corpus.docs
-						.get(doc).docLength + corpus.alphaSum));
-			}
-
-		}*/
-		for(int doc = 0; doc < corpus.docs.size();doc++){
-			for(int i = 0;i < numTopics; i++) {
-				corpus.theta_train[doc][i] = corpus.alpha[i]/(corpus.docs.get(doc).docLength+corpus.docs.get(doc).citationSequence.getLength()
-						+corpus.alphaSum);
-			}
-			int[] topics = corpus.docs.get(doc).wordTopicAssignment;
-			for(int i = 0;i < topics.length; i++){
-				corpus.theta_train[doc][topics[i]] += 1.0/(corpus.docs.get(doc).docLength+corpus.docs.get(doc).citationSequence.getLength()
-						+corpus.alphaSum);
-			}
-			topics = corpus.docs.get(doc).citationTopicAssignmentDuplicate;
-			for(int i = 0;i < topics.length; i++){
-				corpus.theta_train[doc][topics[i]] += 1.0/(corpus.docs.get(doc).docLength+corpus.docs.get(doc).citationSequence.getLength()
-						+corpus.alphaSum);
-			}
-		}
-		
-		for (int k = 0; k < corpus.vocabulary.size(); k++) {
-			for (int i = 0; i < numTopics; i++) {
-				corpus.phi_train[k][i] = ((corpus.typeTopicCounts[k].get(i) + corpus.beta) / (corpus.tokensPerTopic[i] + corpus.betaSum));
-			}
-		}
-		ArrayList<String> entries = Corpus.citationAlphabet.entries;
-		for (int k = 0; k < corpus.citationAlphabet.size(); k++) {
-			int index = Corpus.citationAlphabet.lookupIndex(entries.get(k));
-			for (int i = 0; i < numTopics; i++) {
-
-				corpus.psi_train[k][i] = ((corpus.citationTopicCounts[k].get(i) + corpus.gamma) / (corpus.citationsPerTopic[i] + corpus.gammaSum));
-
-			}
-		}
-
-	}
+	
+	public abstract void estimateParameters_single(Corpus corpus);
 	/**
 	 *  Return an array of sorted sets (one set per topic). Each set 
 	 *   contains IDSorter objects with integer keys into the alphabet.
@@ -173,17 +86,16 @@ public abstract class Model {
 		// Collect counts
 		for (int type = 0; type < corpus.vocabulary.size(); type++) {
 			for (int i = 0; i < numTopics; i++) {
-
-				corpus.phi_train[type][i] = ((corpus.typeTopicCounts[type].get(i) + corpus.beta) / (corpus.tokensPerTopic[i] + corpus.betaSum));
-				topicSortedWords.get(i).add(new IDSorter(type, corpus.phi_train[type][i]));
+				phi_train[type][i] = ((corpus.typeTopicCounts[type].get(i) + beta) / (corpus.tokensPerTopic[i] + betaSum));
+				topicSortedWords.get(i).add(new IDSorter(type, phi_train[type][i]));
 			}
 
 		}
 
-
 		return topicSortedWords;
 	}
 	
+	// Need overwrited in specific Models
 	public ArrayList<TreeSet<IDSorter>> getSortedCitation (Corpus corpus,int numTopics,HashMap<Integer,String> citationMap) {
 		
 		ArrayList<TreeSet<IDSorter>> topicSortedCitation = new ArrayList<TreeSet<IDSorter>>(numTopics);
@@ -199,18 +111,14 @@ public abstract class Model {
 			int index=Corpus.citationAlphabet.lookupIndex(entries.get(type));
 			citationMap.put(index, entries.get(type));
 			for (int i = 0; i < numTopics; i++) {			
-				corpus.psi_train[type][i] = ((corpus.citationTopicCounts[index].get(i) + corpus.gamma) / (corpus.citationsPerTopic[i] + corpus.gammaSum));
-				topicSortedCitation.get(i).add(new IDSorter(index, corpus.psi_train[type][i]));
+				psi_train[type][i] = ((corpus.citationTopicCounts[index].get(i) + gamma) / (corpus.citationsPerTopic[i] + gammaSum));
+				topicSortedCitation.get(i).add(new IDSorter(index, psi_train[type][i]));
 			}
 
 		}
 
-
 		return topicSortedCitation;
 	}
-	
-	
-	
 	
 	public abstract double sampleLikelihood(int numSamples, Corpus corus);
 
@@ -229,8 +137,8 @@ public abstract class Model {
 			double tmp_ll = 0;
 			for (int i = 0; i < keys.length; i++) {
 				for (int t = 0; t < numTopics; t++) {
-					tmp_ll += corpus.theta_train[doc][t]
-							* corpus.phi_train[keys[i]][t];
+					tmp_ll += theta_train[doc][t]
+							* phi_train[keys[i]][t];
 
 				}
 				ll += (Math.log(tmp_ll) * word_counts.get(keys[i]));
@@ -319,7 +227,7 @@ public abstract class Model {
 
 		for (int topic = 0; topic < numTopics; topic++) {
 			topicLogGammas[topic] = Dirichlet
-					.logGammaStirling(corpus.alpha[topic]);
+					.logGammaStirling(alpha[topic]);
 		}
 
 		for (int doc = 0; doc < corpus.docs.size(); doc++) {
@@ -336,13 +244,13 @@ public abstract class Model {
 				if (topicCounts[topic] > 0) {
 
 					logLikelihood += (Dirichlet
-							.logGammaStirling(corpus.alpha[topic]
+							.logGammaStirling(alpha[topic]
 									+ topicCounts[topic]) - topicLogGammas[topic]);
 				}
 			}
 
 			// subtract the (count + parameter) sum term
-			logLikelihood -= Dirichlet.logGammaStirling(corpus.alphaSum
+			logLikelihood -= Dirichlet.logGammaStirling(alphaSum
 					+ docTopics.length);
 
 			Arrays.fill(topicCounts, 0);
@@ -350,7 +258,7 @@ public abstract class Model {
 
 		// add the parameter sum term
 		logLikelihood += corpus.docs.size()
-				* Dirichlet.logGammaStirling(corpus.alphaSum);
+				* Dirichlet.logGammaStirling(alphaSum);
 
 		// And the topics
 
@@ -364,7 +272,7 @@ public abstract class Model {
 				int count = typeTopicCounts[type].get(topic);
 				if (count > 0) {
 					nonZeroTypeTopics++;
-					logLikelihood += Dirichlet.logGammaStirling(corpus.beta
+					logLikelihood += Dirichlet.logGammaStirling(beta
 							+ count);
 				}
 			}
@@ -373,12 +281,12 @@ public abstract class Model {
 		for (int topic = 0; topic < numTopics; topic++) {
 
 			logLikelihood -= Dirichlet
-					.logGammaStirling((corpus.beta * numTopics)
+					.logGammaStirling((beta * numTopics)
 							+ tokensPerTopic[topic]);
 		}
 
-		logLikelihood += (Dirichlet.logGammaStirling(corpus.beta * numTopics))
-				- (Dirichlet.logGammaStirling(corpus.beta) * nonZeroTypeTopics);
+		logLikelihood += (Dirichlet.logGammaStirling(beta * numTopics))
+				- (Dirichlet.logGammaStirling(beta) * nonZeroTypeTopics);
 
 		//return Math.exp(-1 * logLikelihood / sampleSize);
 		return logLikelihood;
