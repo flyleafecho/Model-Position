@@ -18,4 +18,8 @@ public class CitePart_LDA extends Model {
 		File paper_info = new File(docDir);
 		BufferedReader metareader = new BufferedReader(new InputStreamReader(new FileInputStream(paper_info),"utf-8"));
 	}
+	
+	public static void main(String[] args){
+		
+	}
 }
