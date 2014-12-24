@@ -43,10 +43,15 @@ public class ContextDocument extends Document {
 		}
 	}
 
+	
+	
 	// in its constructor
-	public TIntObjectHashMap<Vector<Integer>> contextObject = null;//[句子编号，句子所含的citation编号集合]
+	public TIntObjectHashMap<Vector<Integer>> contextObject = null;//[��ュ��缂���凤����ュ�����������citation缂���烽�����]
 	public TIntObjectHashMap<Vector<Integer>> SentenseBoundaries = null;
 	public TIntIntHashMap citationSet;
+	//add two variables for different parts
+	public TIntIntHashMap[] citationSetByPart;
+	
 	public TIntIntHashMap citationSetTest;
 	public TIntIntHashMap citationTopicAssignment;
 	public int[] citationTopicAssignmentDuplicate;
@@ -58,11 +63,13 @@ public class ContextDocument extends Document {
 	public double avgRightContextLength;
 
 	public ContextDocument() {
+		partNums = 2;
 		wordLength = 0;
 		sentenseLength = 0;
 		SentenseBoundaries = new TIntObjectHashMap<Vector<Integer>>();
 		contextObject = new TIntObjectHashMap<Vector<Integer>>();
 		citationSet = new TIntIntHashMap();
+		citationSetByPart = new TIntIntHashMap[partNums];
 		citationSetTest = new TIntIntHashMap();
 		citationContexts = new Vector<CitationContext>();
 
@@ -151,43 +158,46 @@ public class ContextDocument extends Document {
 	{
 		int label = 0;
 		Vector<String> contentVector = new Vector<String>();
-		Vector<String> citationVector = new Vector<String>();
+		Vector<Citation> citationVector = new Vector<Citation>();
 		ArrayList<String> docContent=new ArrayList<String>();
 		int DocIndex=Docs.indexOf(name);
-		String[] citation = citations.get(DocIndex).split(" ");	
-		for(int i=0;i<citation.length;i++)
+		//Format of Str : #cid:#part\t#cid:#part.....
+		String[] citation_part = citations.get(DocIndex).split("\\t");	
+		for(int i=0;i<citation_part.length;i++)
 		{
-			citationVector.add(citation[i]) ;
-			Corpus.citationAlphabet.lookupIndex(citation[i]);
-			CitationContext cc = new CitationContext(Corpus.citationAlphabet.lookupIndex(citation[i]),sentenseLength, sentenseLength);
-			citationContexts.add(cc); //no citation context, sentenseLength=0
-			citationSet.put(Corpus.citationAlphabet.lookupIndex(citation[i]), 1);
+			String citation = citation_part[i].split(":")[0];
+			int part = Integer.parseInt(citation_part[i].split(":")[1]);
+			citationVector.add(new Citation(citation,part)) ;
+			Corpus.citationAlphabet.lookupIndex(citation);
+			citationSet.adjustOrPutValue(Corpus.citationAlphabet.lookupIndex(citation), 1,1);
+			citationSetByPart[part].adjustOrPutValue(Corpus.citationAlphabet.lookupIndex(citation), 1, 1);			
 		}
 			
-			String [] words=context.split("\\W+");
-			for(String word : words){
-				String tmp = word.trim();
-				if(tmp.trim().length()>2){
-					docContent.add(tmp);
-				}
+		String [] words=context.split("\\W+");
+		for(String word : words){
+			String tmp = word.trim();
+			if(tmp.trim().length()>2){
+				docContent.add(tmp);
 			}
-			//docContent.addAll(Arrays.asList(words));		
+		}	
 		
 		RemoveStopWord removeStopWords =new RemoveStopWord(new File("D:/WorkPaceEclipse_2/citation_LDA-master/src/stoplists/en.txt"), "UTF-8",docContent.toArray(new String[docContent.size()]), false, false);
-	     String [] removeStopTokens=removeStopWords.RemoveStopWords();
-		for(int k=0;k<removeStopTokens.length;k++)
-		{
-			if(!removeStopTokens[k].matches(".*\\d+.* | \\W+ |\\d+"))
-			{
-				if(!removeStopTokens[k].replace("[\\p{Punct}\\p{Space}]", "").trim().equals(""))
-			{contentVector.add(removeStopTokens[k].replace("[\\p{Punct}\\p{Space}]", ""));}
-			}	
-			
-		}
+	    String[] removeStopTokens=removeStopWords.RemoveStopWords();
+	    for(int k=0;k<removeStopTokens.length;k++)
+	    {
+	    	if(!removeStopTokens[k].matches(".*\\d+.* | \\W+ |\\d+"))
+	    	{
+	    		if(!removeStopTokens[k].replace("[\\p{Punct}\\p{Space}]", "").trim().equals(""))
+	    		{
+	    			contentVector.add(removeStopTokens[k].replace("[\\p{Punct}\\p{Space}]", ""));
+	    		}
+	    	}	
+
+	    }
 		
 		ProcessCSV(name, label, docid, contentVector, citationVector);	
 		// add concept vectors
-				double norm = 0;
+				/*double norm = 0;
 				TIntDoubleHashMap content = new TIntDoubleHashMap();
 				int[] keys = this.word_counts.keys();
 				for (int i = 0; i < keys.length; i++) {
@@ -207,7 +217,7 @@ public class ContextDocument extends Document {
 				} else {
 					Corpus.concepts.get(docid).setContent(docid, name, content);
 					Corpus.concepts.get(docid).processDocuemnt(this);
-				}
+				}*/
 
 	}
 	public void add_Auhtor(String name, int docid,String citations)

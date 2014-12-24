@@ -13,7 +13,7 @@ public class Corpus implements Serializable {
 	public static Alphabet vocabulary = new Alphabet();
 	public static Alphabet citationAlphabet = new Alphabet();
 	//public static Alphabet citedAlphabet=new Alphabet();
-	public static Alphabet docAlphabet = new Alphabet();  //可以存放文档名字
+	public static Alphabet docAlphabet = new Alphabet();  //���浠ュ����炬��妗ｅ��瀛�
 	public  Alphabet docNameAlphabet = new Alphabet();  
 	public static ArrayList<String> citationVector=new ArrayList<String>();
 	/*public TIntDoubleHashMap[] cluster_states;
@@ -46,6 +46,8 @@ public class Corpus implements Serializable {
 	
 	public int numTypes;
 	public int numCitations;
+	//add numPart for representing the num of parts
+	public int numParts;
 	public int[] tokensPerTopic;
 	public int[] citationsPerTopic;
 	
