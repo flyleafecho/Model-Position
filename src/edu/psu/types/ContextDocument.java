@@ -27,6 +27,9 @@ public class ContextDocument extends Document {
 		partNums = 2;
 		citationSet = new TIntIntHashMap();
 		citationSetByPart = new TIntIntHashMap[partNums];
+		for(int i = 0; i < partNums; i++){
+			citationSetByPart[i] = new TIntIntHashMap();
+		}
 	}
 	
 	public void add_milestone(String name, int docid, String context, ArrayList<String> Docs,ArrayList<String> citations)

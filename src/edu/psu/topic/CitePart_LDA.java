@@ -125,8 +125,7 @@ public class CitePart_LDA extends Model {
 			corpus.typeTopicCounts[i] = new TIntIntHashMap();*/
 	}
 	
-	public void InitializeAssignments(Corpus corpus,
-			LabelAlphabet topicAlphabet){
+	public void InitializeAssignments(Corpus corpus, LabelAlphabet topicAlphabet){
 		this.random = new Randoms();
 		for(int doc_index = 0; doc_index < corpus.docs.size(); doc_index++){
 			ContextDocument doc = corpus.docs.get(doc_index);
@@ -147,6 +146,7 @@ public class CitePart_LDA extends Model {
 					corpus.citationsPerTopicByPart[i][topic]++;			//used for estimate doc_topic
 				}
 			}
+			corpus.docs.set(doc_index, doc);
 		}
 	}
 	
@@ -165,7 +165,7 @@ public class CitePart_LDA extends Model {
 			doc_topic_by_part[i] = new TIntIntHashMap();
 		
 		for(int i = 0; i < numParts; i++){
-			int[] keys = doc.citationSequenceByPart[i].getFeatures();
+			//int[] keys = doc.citationSequenceByPart[i].getFeatures();
 			for (int t = 0; t < doc.citationSequenceByPart[i].getLength(); t++) 
 			{
 				doc_topic_by_part[i].adjustOrPutValue(doc.citationTAByPart[i][t], 1, 1);
@@ -173,8 +173,8 @@ public class CitePart_LDA extends Model {
 		}
 
 		for(int i = 0; i < numParts; i++){
-			int[] keys = doc.citationSequenceByPart[i].getFeatures();
-			for(int t = 0; t < keys.length; t++){
+			int[] keys = doc.citationSequenceByPart[i].getFeatures();	//keys' size are bigger than or equal to the length of FS 
+			for(int t = 0; t < doc.citationSequenceByPart[i].getLength(); t++){
 				int topic = doc.citationTAByPart[i][t];
 				
 				corpus.citationsPerTopicByPart[i][topic]--;
@@ -261,6 +261,9 @@ public class CitePart_LDA extends Model {
 					rank++;
 				}
 			}
+			String line = out.toString();
+			System.out.println(line);
+			bw.write(line);
 		}
 		
 		bw.write("# Doc_Topic");  
@@ -326,9 +329,9 @@ public class CitePart_LDA extends Model {
 			TIntIntHashMap split){return 0;}
 	
 	public static void main(String[] args) throws Exception{
-		String paper_info = "";
-		String paper_citation = "";
-		String result = "";
+		String paper_info = "D:\\WorkPaceEclipse_2\\citation_LDA-master\\dataset\\VLDB_TS_CP\\paper_info.txt";
+		String paper_citation = "D:\\WorkPaceEclipse_2\\citation_LDA-master\\dataset\\VLDB_TS_CP\\paper_citation_part.txt";
+		String result = "D:\\WorkPaceEclipse_2\\citation_LDA-master\\dataset\\VLDB_TS_CP\\out.txt";
 		
 		int iterations = 5000;
 		
